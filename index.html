@@ -1,0 +1,199 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <style>
+      html, body {width:100%; height:100%; padding: 0; margin: 0;}
+      #map {width: 100%; /*height:100%;*/ position: absolute; top: 40px; bottom: 0px; background: black; z-index:1;}
+      div.cartodb-popup div.cartodb-popup-content {max-height:none | inherit}
+	  #footer {
+      position:absolute;
+      bottom:0px;
+      left:0px;
+      right:0px;
+      background:#fff;
+      z-index:999;
+      overflow:auto;
+      /*height:160px;*/
+      padding:5px;
+      opacity:0.9;
+      }
+	  h2{color:#fff;}
+      .leaflet-container .leaflet-control-zoom {margin-top:55;}
+
+	ul.inline > li, ol.inline > li {
+    display: inline-block;
+    padding-right: 5px;
+    padding-left: 5px;
+}
+    </style>
+    <link rel="stylesheet" href="http://libs.cartocdn.com/cartodb.js/v2/themes/css/cartodb.css" />
+    <!--[if lte IE 8]>
+    <link rel="stylesheet" href="http://libs.cartocdn.com/cartodb.js/v2/themes/css/cartodb.ie.css" />
+    <![endif]-->
+	<!-- NOTE WE'RE USING A BOOTSWATCH THEME INSTEAD OF BOOTSTRAP STANDARD-->
+    <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/bootswatch/2.3.1/united/bootstrap.min.css" />
+	
+	<!--HERE YOU CAN CUSTOMIZE THE POPUP INFOWINDOW WITH DATA FROM YOU SOURCE TABLE; VARIABLES IN THE MUSTACHE TAGS-->
+    <script type="infowindow/html" id="infowindow_template">
+      <div class="cartodb-popup">
+         <a href="#close" class="cartodb-popup-close-button close">x</a>
+         <div class="cartodb-popup-content-wrapper">
+           <div class="cartodb-popup-content">
+             <!-- 'content.data.whatever' CONTAINS THE FIELD DATA, THE REST IS HTML -->
+             <h2 style="color:#333;">Ward #{{content.data.label}}</h2><hr>
+			 <p>Population: {{content.data.poptot}}</p>
+			 <hr>         
+           </div>
+         </div>
+         <div class="cartodb-popup-tip-container"></div>
+      </div>
+    </script>
+  </head>
+  <body onload="init()">
+    <!--ADD THE MAP ELEMENT-->
+    <div id='map'></div>
+    <!--SOME BOOTSTRAP NAV BOILERPLATE TO MAKE THINGS SIMPLE AND APPEALING-->
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="brand">Burlington VT - Ward Redistricting</a>
+          <ul class="nav">
+		    <li class="dropdown">
+                  <a href="#" class="dropdown-toggle" data-toggle="dropdown">Proposed Plans <b class="caret"></b></a>
+                  <ul class="dropdown-menu">
+                    <li><a class="lyr active" id="current">Current Wards</a></li>
+					<li class="divider"></li>
+                    <li><a class="lyr" id="4into8">"4 Wards Into 8"</a></li>
+                    <li><a class="lyr" id="8v1">"8 Wards v1"</a></li>
+                    <li><a class="lyr" id="6w13c">"6 Wards 13 Councilors"</a></li>
+                    <li><a class="lyr" id="7w13c">"7 Wards 13 Councilors"</a></li>
+                  </ul>
+                </li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown"><small><i class="icon-download icon-white"></i> Download Plans <b class="caret"></b></small></a>
+              <ul class="dropdown-menu">
+                <li><a id="downkml" href="#" target="_blank">KML</a></li>
+              </ul>
+            </li>
+			<!--TRIGGERS A MODAL WINDOW WITH ALL YOUR EXPLANATORY INFORMATION; NICE TO HAVE HIDDEN MOST OF THE TIME-->
+            <!--<li><a href="#myModal" role="button" class="pull-right" data-toggle="modal"><small>About</small></a></li>-->
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="container-narrow">
+	<!--MODAL POPUP CONTENT-->
+    <div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h3 id="myModalLabel">About</h3>
+      </div>
+      <div class="modal-body">
+        <p>This page is a demonstration of a theme-specific, easily-replicated public portal for open geodata. More details on the project are <a href="http://geosprocket.blogspot.com/2013/04/toward-ideal-geoportal.html" target="_blank">available here.</a></p>
+        <hr>
+		<!--HACKTASTIC CATEGORICAL LEGEND-->
+        <p><strong>Zoning Categories</strong></p>
+        <ul class="unstyled">
+          <li><a style='background:#f6e03f;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a>&nbsp;Enterprise</li>
+          <li><a style='background:#adbd06;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a>&nbsp;Institutional</li>
+          <li><a style='background:#cfc8a2;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a>&nbsp;Mixed Use</li>
+          <li><a style='background:#f6f7bd;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a>&nbsp;Registered Community Organizations</li>
+          <li><a style='background:#895793;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a>&nbsp;Residential</li>
+          <li><a style='background:#de3f33;'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a>&nbsp;Urban Reserve</li>
+        </ul>
+        <p><small>Buildings and zoning data provided by <a href="http://burlingtonvt.gov/" target="_blank">the City of Burlington</a> and <a href="http://www.openstreetmap.org/?lat=44.48026&lon=-73.21476&zoom=15&layers=M" target="_blank">Openstreetmap Contributors</a></small></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+      </div>
+    </div>
+	
+	<div id="footer">
+		<div class="container">
+				<ul class="inline">
+					<li><h2 class="switch-title">Plan: Current Wards </h2></li>
+					<li class="divider"></li>
+				</ul>  
+         </div>
+    </div>
+	
+  </body>
+  <script>
+      //WRAP THE MAP ACTION 
+    var map;
+    
+    function init() {
+    // INITIATE LEAFLET MAP    
+    map = new L.Map('map', {
+      center: [44.4795, -73.2070],
+      zoom: 14,
+      minZoom: 12,
+      maxZoom: 18
+    });
+	
+    //CALL SOME COMPELLING MAPBOX TILES AS A BASE    
+    L.tileLayer('http://a.tiles.mapbox.com/v3/landplanner.map-ixbeq4vy/{z}/{x}/{y}.png', {
+      attribution: '<a href="http://mapbox.com/about/maps/" target="_blank">w/ Mapbox</a>'
+    }).addTo(map);
+    
+    //DEFINE A REFERENCE OVERLAY TO PLACE ON TOP:
+    var reference = L.tileLayer('http://a.tiles.mapbox.com/v3/landplanner.map-v9fzb5f0/{z}/{x}/{y}.png');
+    
+    //GIVE CARTODB THE PARAMETERS OF YOUR TABLE BY VIZ.JSON - 
+    var current_lyr = $('.lyr.active').attr('id');
+	
+    var layerUrl = 'http://geosprocket.cartodb.com/api/v1/viz/plans_052113c/viz.json';
+    var layerOptions = {
+	        query: "SELECT * FROM {{table_name}} WHERE poptot>0 AND plan = '" + current_lyr + "'",
+	        tile_style: "Map{buffer-size:512;}#{{table_name}}{polygon-opacity:0.8;[label='1']{polygon-fill:#445060;}[label='2']{polygon-fill:#829AB5;}[label='3']{polygon-fill:#6A9E6E;}[label='4']{polygon-fill:#C14543;}[label='5']{polygon-fill:#D6D5D1;}[label='6']{polygon-fill:#9E4B1B;}[label='7']{polygon-fill:#745BB5;}[label='8']{polygon-fill:#779E18;}::border{line-color:#FFF;line-opacity:1;line-width:3;}}"
+		}
+
+		//Define layers array so you can put it through a julienne slicer later
+		var layers = [];
+		
+    cartodb.createLayer(map, layerUrl, layerOptions)
+	        .on('done', function (layer) {
+	        layer.infowindow.set('template', $('#infowindow_template').html());
+	        map.addLayer(layer);
+			layers.push(layer);
+	        map.addLayer(reference);
+
+	    }).on('error', function () {
+	        //log the error
+	    });
+		
+		function updateQuery() {
+			layers[0].setOptions ({
+				query: "SELECT * FROM {{table_name}} WHERE poptot>0 AND plan = '" + current_lyr + "'",
+				tile_style: "Map{buffer-size:512;}#{{table_name}}{polygon-opacity:0.8;[label='1']{polygon-fill:#445060;}[label='2']{polygon-fill:#829AB5;}[label='3']{polygon-fill:#6A9E6E;}[label='4']{polygon-fill:#C14543;}[label='5']{polygon-fill:#D6D5D1;}[label='6']{polygon-fill:#9E4B1B;}[label='7']{polygon-fill:#745BB5;}[label='8']{polygon-fill:#779E18;}::border{line-color:#FFF;line-opacity:1;line-width:3;}}"
+			});
+		}
+
+    
+    var hash = new L.Hash(map);
+    
+	//THEMATIC FILTER: ACTIVE LAYER
+		//To redraw layers with the year attribute passed along		
+		$('.lyr').click(function () {
+			$('.lyr').removeClass('active');
+			$(this).addClass('active');
+			$('h2.switch-title').text("Plan: " + $('.lyr.active').text());
+			current_lyr = $(this).attr('id');
+			updateQuery();
+		});
+	
+    //KML FORMAT,            
+    $('#downkml').click(function () {
+      //NOTE THAT THIS IS AN ENCODED SQL STRING IN A URL. BEST THING EVER.
+      var new_sql = "http://geosprocket.cartodb.com/api/v2/sql?q=SELECT%20*%20FROM%20plans_052113c&format=kml";
+    
+      $(this).attr("href", new_sql);
+    });
+    
+    }
+  </script>
+  <!--libraries kept to a minimum. Bootstrap could be used a la carte here, but I'm being lazy-->
+  <script src="http://libs.cartocdn.com/cartodb.js/v2/cartodb.js"></script>
+  <script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>
+  <script src="http://geosprocket.com/assets/leaflet/leaflet-hash.js"></script>
+</html>
