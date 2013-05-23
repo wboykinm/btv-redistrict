@@ -185,7 +185,7 @@
     //KML FORMAT,            
     $('#downkml').click(function () {
       //NOTE THAT THIS IS AN ENCODED SQL STRING IN A URL. BEST THING EVER.
-      var new_sql = "http://geosprocket.cartodb.com/api/v2/sql?q=SELECT%20*%20FROM%20plans_052113c&format=kml";
+      var new_sql = "http://geosprocket.cartodb.com/api/v2/sql?q=SELECT%20*%20FROM%20plans_052113cWHERE%20plan%20=%20%27" + current_lyr + "%27&format=kml";
     
       $(this).attr("href", new_sql);
     });
